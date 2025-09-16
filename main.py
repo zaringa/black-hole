@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 
 # --- параметры ---
-G = 1.0           # гравитационная постоянная (условная)
+G = 10.0           # гравитационная постоянная (условная)
 M = 1000.0         # масса чёрной дыры
 N = 300           # число частиц ("материя звезды")
 

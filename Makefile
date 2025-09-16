@@ -27,7 +27,7 @@ install: venv
 
 start: install
 	@echo "Запуск main.py..."
-	$(PYTHON) main.py
+	$(PYTHON) test.py
 
 clean:
 	@echo "Очистка виртуальной среды..."
