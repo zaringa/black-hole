@@ -1,3 +1,5 @@
 numpy
 matplotlib
 vpython
+pyvista
+conda install -c conda-forge pyvista
