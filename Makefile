@@ -25,6 +25,10 @@ install: venv
 	fi
 	@echo "Зависимости установлены"
 
+gptvers: install
+	@echo "Запуск gpt.py..."
+	$(PYTHON) gptversion.py
+
 start: install
 	@echo "Запуск main.py..."
 	$(PYTHON) main.py

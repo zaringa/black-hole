@@ -1,0 +1,162 @@
+import pyvista as pv
+import numpy as np
+
+
+class BlackHole:
+    def __init__(self, mass=1.0, position=(0, 0, 0)):
+        self.mass = mass
+        self.position = np.array(position)
+        self.radius = 2 * mass  # условный радиус горизонта событий
+
+        # Компоненты
+        self.event_horizon = None
+        self.accretion_disk = None
+        self.jets = []
+
+        self._create_components()
+
+    def _create_components(self):
+        """Создание компонентов черной дыры"""
+        self.event_horizon = pv.Sphere(radius=self.radius, center=self.position)
+        self.accretion_disk = AccretionDisk(
+            inner_radius=self.radius * 1.5,
+            outer_radius=self.radius * 4.0,
+            center=self.position
+        )
+        self.jets = [
+            Jet(center=self.position, direction=(0, 0, 1), length=self.radius * 3),
+            Jet(center=self.position, direction=(0, 0, -1), length=self.radius * 3)
+        ]
+
+    def update(self, time):
+        """Обновление состояния черной дыры"""
+        self.accretion_disk.rotate(time)
+        for jet in self.jets:
+            jet.pulsate(time)
+
+    def add_to_plotter(self, plotter):
+        """Добавление компонентов на сцену"""
+        plotter.add_mesh(self.event_horizon, color='black', smooth_shading=True, name='event_horizon')
+        self.accretion_disk.add_to_plotter(plotter)
+        for jet in self.jets:
+            jet.add_to_plotter(plotter)
+
+
+class AccretionDisk:
+    def __init__(self, inner_radius=2.0, outer_radius=5.0, center=(0, 0, 0), inclination=30):
+        self.inner_radius = inner_radius
+        self.outer_radius = outer_radius
+        self.center = np.array(center)
+        self.inclination = np.radians(inclination)
+        self.rotation_angle = 0
+        self.mesh = None
+        self._create_geometry()
+
+    def _create_geometry(self):
+        theta = np.linspace(0, 2 * np.pi, 150)
+        r = np.linspace(self.inner_radius, self.outer_radius, 80)
+        R, T = np.meshgrid(r, theta)
+
+        x = R * np.cos(T)
+        y = R * np.sin(T) * np.cos(self.inclination)
+        z = R * np.sin(T) * np.sin(self.inclination)
+
+        self.mesh = pv.StructuredGrid(x, y, z)
+        self._update_temperature(x, y, z)
+
+    def _update_temperature(self, x, y, z):
+        radial_distance = np.sqrt(x ** 2 + y ** 2 + z ** 2)
+        self.temperature = (radial_distance - self.inner_radius) / (self.outer_radius - self.inner_radius)
+
+    def rotate(self, time):
+        self.rotation_angle = time * 0.8
+        theta = np.linspace(0, 2 * np.pi, 150)
+        r = np.linspace(self.inner_radius, self.outer_radius, 80)
+        R, T = np.meshgrid(r, theta)
+
+        x = R * np.cos(T + self.rotation_angle)
+        y = R * np.sin(T + self.rotation_angle) * np.cos(self.inclination)
+        z = R * np.sin(T + self.rotation_angle) * np.sin(self.inclination) + 0.05 * np.sin(3 * T + time)
+
+        new_points = np.column_stack((x.ravel(), y.ravel(), z.ravel()))
+        self.mesh.points = new_points
+        self._update_temperature(x, y, z)
+
+    def add_to_plotter(self, plotter):
+        plotter.add_mesh(self.mesh, scalars=self.temperature.ravel(),
+                         cmap='plasma', opacity=0.85, name='accretion_disk')
+
+
+class Jet:
+    def __init__(self, center=(0, 0, 0), direction=(0, 0, 1), length=3.0):
+        self.center = np.array(center)
+        self.direction = np.array(direction)
+        self.length = length
+        self.base_radius = 0.3
+        self.mesh = None
+        self._create_geometry()
+
+    def _create_geometry(self):
+        jet_center = self.center + self.direction * self.length / 2
+        self.mesh = pv.Cone(center=jet_center, direction=self.direction,
+                            radius=self.base_radius, height=self.length)
+
+    def pulsate(self, time):
+        scale = 1 + 0.25 * np.sin(time * 4)
+        current_radius = self.base_radius * scale
+        current_length = self.length * scale
+        jet_center = self.center + self.direction * current_length / 2
+        self.mesh.points = pv.Cone(center=jet_center, direction=self.direction,
+                                   radius=current_radius, height=current_length).points
+
+    def add_to_plotter(self, plotter):
+        plotter.add_mesh(self.mesh, color='cyan', opacity=0.5, smooth_shading=True, name='jet')
+
+
+class BlackHoleScene:
+    def __init__(self):
+        self.plotter = pv.Plotter(window_size=(1000, 800))
+        self.black_holes = []
+        self.time = 0
+        self._setup_environment()
+
+    def _setup_environment(self):
+        self.plotter.set_background("black")
+        self.plotter.enable_anti_aliasing()
+        self.plotter.add_floor('z', color="gray", lighting=False, opacity=0.05)
+        self.plotter.add_axes(line_width=2, color="white")
+        self.plotter.add_text("Black Hole Simulation", position='upper_left', font_size=14, color='white')
+
+    def add_black_hole(self, mass=1.0, position=(0, 0, 0)):
+        black_hole = BlackHole(mass, position)
+        self.black_holes.append(black_hole)
+        black_hole.add_to_plotter(self.plotter)
+        return black_hole
+
+    def animate(self, duration=10, fps=30):
+        self.plotter.open_gif("black_hole_animation.gif", fps=fps)
+        total_frames = duration * fps
+        for frame in range(total_frames):
+            self.time = frame / fps
+            for bh in self.black_holes:
+                bh.update(self.time)
+
+            # Камера вращается вокруг центра
+            cam_r = 15
+            cam_x = cam_r * np.cos(self.time * 0.3)
+            cam_y = cam_r * np.sin(self.time * 0.3)
+            self.plotter.camera_position = [(cam_x, cam_y, 3), (0, 0, 0), (0, 0, 1)]
+
+            self.plotter.write_frame()
+        self.plotter.close()
+
+    def show(self):
+        self.plotter.camera_position = [(10, 0, 4), (0, 0, 0), (0, 0, 1)]
+        self.plotter.show()
+
+
+if __name__ == "__main__":
+    scene = BlackHoleScene()
+    scene.add_black_hole(mass=1.0, position=(0, 0, 0))
+    scene.animate(duration=6, fps=24)
+    # scene.show()
