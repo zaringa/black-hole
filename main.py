@@ -7,26 +7,21 @@ class BlackHole:
         self.position = np.array(position)
         self.radius = 2 * mass  # условный радиус горизонта событий
         
-        # Компоненты черной дыры
         self.event_horizon = None
         self.accretion_disk = None
         self.jets = []
         
-        self._create_components()
+        self.create_components()
     
-    def _create_components(self):
+    def create_components(self):
         """Создание компонентов черной дыры"""
-        # Горизонт событий
         self.event_horizon = pv.Sphere(radius=self.radius, center=self.position)
         
-        # Аккреционный диск
         self.accretion_disk = AccretionDisk(
             inner_radius=self.radius * 1.5,
             outer_radius=self.radius * 4.0,
             center=self.position
         )
-        
-        # Релятивистские струи
         self.jets = [
             Jet(center=self.position, direction=(0, 0, 1), length=self.radius * 3),
             Jet(center=self.position, direction=(0, 0, -1), length=self.radius * 3)
@@ -78,7 +73,7 @@ class AccretionDisk:
     
     def rotate(self, time):
         """Вращение диска"""
-        self.rotation_angle = time * 0.5  # скорость вращения
+        self.rotation_angle = time * 0.5
         
         theta = np.linspace(0, 2*np.pi, 100)
         r = np.linspace(self.inner_radius, self.outer_radius, 50)
@@ -154,7 +149,6 @@ class BlackHoleScene:
         for frame in range(total_frames):
             self.time = frame / fps
             
-            # Обновление всех черных дыр
             for black_hole in self.black_holes:
                 black_hole.update(self.time)
             
