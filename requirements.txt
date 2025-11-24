@@ -3,3 +3,4 @@ matplotlib
 vpython
 pyvista
 imageio
+pygame
