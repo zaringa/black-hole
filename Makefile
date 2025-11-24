@@ -26,13 +26,15 @@ install: venv
 	@echo "Зависимости установлены"
 
 gptvers: install
-	@echo "Запуск gpt.py..."
+	@echo "Запуск gptversion.py..."
 	$(PYTHON) gptversion.py
 
 start: install
 	@echo "Запуск main.py..."
 	$(PYTHON) main.py
 
+game:
+	$(PYTHON) ranok.py
 clean:
 	@echo "Очистка виртуальной среды..."
 	rm -rf $(VENV_NAME)
